@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Wizard - LivingEntity</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a25;
+            --bg-hover: #252535;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #2d2d3d;
+            --gradient-1: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --gradient-2: linear-gradient(135deg, #06b6d4, #3b82f6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: var(--accent-glow);
+            border-radius: 50%;
+            top: -250px;
+            right: -100px;
+            filter: blur(100px);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .bg-animation::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: rgba(139, 92, 246, 0.2);
+            border-radius: 50%;
+            bottom: -200px;
+            left: -100px;
+            filter: blur(100px);
+            animation: float 10s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(30px, 30px);
+            }
+        }
+
+        /* Main container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Steps indicator */
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .step.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .step.completed {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .step.active .step-number,
+        .step.completed .step-number {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Presets grid */
+        .presets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .preset-card {
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .preset-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-3px);
+        }
+
+        .preset-card.selected {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .preset-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .preset-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .preset-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Generated config */
+        .config-section {
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .config-section h3 {
+            font-size: 0.9rem;
+            color: var(--accent-light);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .config-content {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Chat interface */
+        .chat-container {
+            display: none;
+            height: calc(100vh - 200px);
+            flex-direction: column;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 1rem;
+            border-radius: 1rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--gradient-1);
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 0.25rem;
+        }
+
+        .message-header {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            border-radius: 0 0 1rem 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+        }
+
+        /* Slider */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            flex: 1;
+            height: 6px;
+            background: var(--bg-hover);
+            border-radius: 3px;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        /* Tools list */
+        .tools-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tool-tag {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tool-tag.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .steps {
+                flex-wrap: wrap;
+            }
+
+            .presets-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo">🧠</div>
+            <h1>AI Agent Wizard</h1>
+            <p>Создай своего кастомного ИИ-агента за минуту</p>
+        </header>
+
+        <!-- Steps indicator -->
+        <div class="steps">
+            <div class="step active" data-step="1">
+                <span class="step-number">1</span>
+                <span>Выбор типа</span>
+            </div>
+            <div class="step" data-step="2">
+                <span class="step-number">2</span>
+                <span>Настройка</span>
+            </div>
+            <div class="step" data-step="3">
+                <span class="step-number">3</span>
+                <span>Генерация</span>
+            </div>
+            <div class="step" data-step="4">
+                <span class="step-number">4</span>
+                <span>Чат</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Choose preset -->
+        <div id="step1" class="wizard-step">
+            <div class="card">
+                <h2>🎯 Для чего нужен ИИ-агент?</h2>
+
+                <div class="presets-grid">
+                    <div class="preset-card" data-preset="developer">
+                        <div class="preset-icon">💻</div>
+                        <div class="preset-title">Разработчик</div>
+                        <div class="preset-desc">Создание приложений и кода</div>
+                    </div>
+                    <div class="preset-card" data-preset="assistant">
+                        <div class="preset-icon">🤖</div>
+                        <div class="preset-title">Ассистент</div>
+                        <div class="preset-desc">Помощь в повседневных задачах</div>
+                    </div>
+                    <div class="preset-card" data-preset="writer">
+                        <div class="preset-icon">✍️</div>
+                        <div class="preset-title">Писатель</div>
+                        <div class="preset-desc">Создание текстов и контента</div>
+                    </div>
+                    <div class="preset-card" data-preset="analyst">
+                        <div class="preset-icon">📊</div>
+                        <div class="preset-title">Аналитик</div>
+                        <div class="preset-desc">Анализ данных и отчёты</div>
+                    </div>
+                    <div class="preset-card" data-preset="teacher">
+                        <div class="preset-icon">👨‍🏫</div>
+                        <div class="preset-title">Учитель</div>
+                        <div class="preset-desc">Обучение и объяснение</div>
+                    </div>
+                    <div class="preset-card" data-preset="custom">
+                        <div class="preset-icon">⚙️</div>
+                        <div class="preset-title">Свой вариант</div>
+                        <div class="preset-desc">Полная кастомизация</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Или опиши своими словами:</label>
+                    <textarea id="customDescription"
+                        placeholder="Например: ИИ для создания мобильных приложений на React Native, который умеет писать код, создавать компоненты и помогать с отладкой..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="nextStep(2)">
+                        Далее →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Configuration -->
+        <div id="step2" class="wizard-step hidden">
+            <div class="card">
+                <h2>⚙️ Настройка агента</h2>
+
+                <div class="form-group">
+                    <label>Имя агента</label>
+                    <input type="text" id="agentName" placeholder="Ава">
+                </div>
+
+                <div class="form-group">
+                    <label>Температура (креативность)</label>
+                    <div class="slider-container">
+                        <span>🎯 Точный</span>
+                        <input type="range" id="temperature" min="0" max="100" value="50">
+                        <span>🎨 Креативный</span>
+                        <span class="slider-value">0.5</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Инструменты</label>
+                    <div class="tools-list" id="toolsList">
+                        <div class="tool-tag active" data-tool="say_to_user">💬 Ответы</div>
+                        <div class="tool-tag active" data-tool="create_file">📝 Создание файлов</div>
+                        <div class="tool-tag active" data-tool="read_file">📖 Чтение файлов</div>
+                        <div class="tool-tag" data-tool="list_files">📁 Список файлов</div>
+                        <div class="tool-tag" data-tool="delete_file">🗑️ Удаление файлов</div>
+                        <div class="tool-tag active" data-tool="get_time">🕐 Время</div>
+                        <div class="tool-tag" data-tool="calculate">🔢 Вычисления</div>
+                        <div class="tool-tag" data-tool="web_search">🔍 Поиск</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>API Provider</label>
+                    <select id="provider">
+                        <option value="cerebras">Cerebras (быстрый)</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="groq">Groq</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="apiKey" placeholder="Ваш API ключ">
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" onclick="nextStep(1)">
+                        ← Назад
+                    </button>
+                    <button class="btn btn-primary" onclick="generateAgent()">
+                        🚀 Сгенерировать агента
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Generated config -->
+        <div id="step3" class="wizard-step hidden">
+            <div class="card">
+                <h2>✨ Агент сгенерирован!</h2>
+
+                <div class="config-section">
+                    <h3>🧠 Системный промпт</h3>
+                    <div class="config-content" id="generatedPrompt"></div>
+                </div>
+
+                <div class="config-section">
+                    <h3>💭 Воспоминания личности</h3>
+                    <div class="config-content" id="generatedMemories"></div>
+                </div>
+
+                <div class="config-section">
+                    <h3>🔧 Инструменты</h3>
+                    <div class="config-content" id="generatedTools"></div>
+                </div>
+
+                <div class="config-section">
+                    <h3>⚙️ Параметры</h3>
+                    <div class="config-content" id="generatedParams"></div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between;">
+                    <button class="btn btn-secondary" onclick="nextStep(2)">
+                        ← Изменить
+                    </button>
+                    <button class="btn btn-success" onclick="startChat()">
+                        💬 Начать чат
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Chat -->
+        <div id="step4" class="wizard-step hidden">
+            <div class="card" style="height: calc(100vh - 250px); display: flex; flex-direction: column;">
+                <h2>
+                    <span id="chatAgentName">🤖 Ава</span>
+                    <button class="btn btn-secondary" onclick="stopChat()"
+                        style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        ⏹️ Остановить
+                    </button>
+                </h2>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai">
+                        <div class="message-header">Ава</div>
+                        Привет! Я готова помочь тебе. Чем займёмся?
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Напиши сообщение..."
+                        onkeypress="handleChatKeypress(event)">
+                    <button class="btn btn-primary" onclick="sendMessage()">
+                        Отправить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentStep = 1;
+        let selectedPreset = null;
+        let agentConfig = null;
+        let isRunning = false;
+
+        // Presets configuration
+        const presets = {
+            developer: {
+                name: 'Девелопер',
+                personality: `Я опытный разработчик программного обеспечения.
+Я специализируюсь на создании приложений и написании кода.
+Я знаю множество языков программирования: Python, JavaScript, TypeScript, Go.
+Я помогаю с архитектурой, отладкой и лучшими практиками.
+Я пишу чистый, понятный и хорошо документированный код.`,
+                tools: ['say_to_user', 'create_file', 'read_file', 'list_files'],
+                temperature: 0.3
+            },
+            assistant: {
+                name: 'Ассистент',
+                personality: `Я дружелюбный и полезный ИИ-ассистент.
+Я помогаю с различными задачами и вопросами.
+Я стараюсь быть точным и полезным.
+Я всегда вежлив и уважителен.
+Если не знаю ответа - честно признаюсь.`,
+                tools: ['say_to_user', 'get_time', 'calculate'],
+                temperature: 0.5
+            },
+            writer: {
+                name: 'Писатель',
+                personality: `Я творческий писатель и копирайтер.
+Я создаю увлекательные тексты, статьи и истории.
+Я умею адаптировать стиль под разные задачи.
+Я помогаю с редактированием и улучшением текстов.
+Я генерирую креативные идеи для контента.`,
+                tools: ['say_to_user', 'create_file', 'read_file'],
+                temperature: 0.8
+            },
+            analyst: {
+                name: 'Аналитик',
+                personality: `Я аналитик данных и бизнес-консультант.
+Я анализирую информацию и делаю выводы.
+Я создаю отчёты и визуализации.
+Я помогаю принимать решения на основе данных.
+Я точен в расчётах и логичен в рассуждениях.`,
+                tools: ['say_to_user', 'calculate', 'create_file', 'read_file'],
+                temperature: 0.2
+            },
+            teacher: {
+                name: 'Учитель',
+                personality: `Я терпеливый и понятный учитель.
+Я объясняю сложные вещи простым языком.
+Я использую примеры и аналогии.
+Я адаптируюсь к уровню ученика.
+Я поощряю вопросы и любознательность.`,
+                tools: ['say_to_user', 'create_file'],
+                temperature: 0.6
+            },
+            custom: {
+                name: 'Кастомный',
+                personality: '',
+                tools: ['say_to_user'],
+                temperature: 0.5
+            }
+        };
+
+        // Provider configs
+        const providers = {
+            cerebras: { url: 'https://api.cerebras.ai/v1', model: 'gpt-oss-120b' },
+            openai: { url: null, model: 'gpt-4-turbo-preview' },
+            groq: { url: 'https://api.groq.com/openai/v1', model: 'mixtral-8x7b-32768' },
+            deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' }
+        };
+
+        // Tool descriptions for system prompt
+        const toolDescriptions = {
+            say_to_user: {
+                name: 'say_to_user',
+                description: 'Сказать что-то пользователю. Используй для ответов и сообщений.',
+                params: { text: 'Текст сообщения для пользователя' }
+            },
+            create_file: {
+                name: 'create_file',
+                description: 'Создать файл с указанным содержимым.',
+                params: { path: 'Путь к файлу', content: 'Содержимое файла' }
+            },
+            read_file: {
+                name: 'read_file',
+                description: 'Прочитать содержимое файла.',
+                params: { path: 'Путь к файлу' }
+            },
+            list_files: {
+                name: 'list_files',
+                description: 'Получить список файлов в директории.',
+                params: { directory: 'Путь к директории' }
+            },
+            delete_file: {
+                name: 'delete_file',
+                description: 'Удалить файл.',
+                params: { path: 'Путь к файлу для удаления' }
+            },
+            get_time: {
+                name: 'get_time',
+                description: 'Получить текущее время и дату.',
+                params: {}
+            },
+            calculate: {
+                name: 'calculate',
+                description: 'Выполнить математическое вычисление.',
+                params: { expression: 'Математическое выражение' }
+            },
+            web_search: {
+                name: 'web_search',
+                description: 'Поиск информации в интернете.',
+                params: { query: 'Поисковый запрос' }
+            }
+        };
+
+        // Initialize
+        document.querySelectorAll('.preset-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedPreset = card.dataset.preset;
+
+                // Auto-fill based on preset
+                const preset = presets[selectedPreset];
+                if (preset && selectedPreset !== 'custom') {
+                    document.getElementById('agentName').value = preset.name;
+                    document.getElementById('temperature').value = preset.temperature * 100;
+                    document.querySelector('.slider-value').textContent = preset.temperature;
+
+                    // Update tools
+                    document.querySelectorAll('.tool-tag').forEach(tag => {
+                        tag.classList.toggle('active', preset.tools.includes(tag.dataset.tool));
+                    });
+                }
+            });
+        });
+
+        // Temperature slider
+        document.getElementById('temperature').addEventListener('input', (e) => {
+            const value = (e.target.value / 100).toFixed(1);
+            document.querySelector('.slider-value').textContent = value;
+        });
+
+        // Tool tags
+        document.querySelectorAll('.tool-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                tag.classList.toggle('active');
+            });
+        });
+
+        function nextStep(step) {
+            document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('hidden'));
+            document.getElementById('step' + step).classList.remove('hidden');
+
+            document.querySelectorAll('.step').forEach((el, i) => {
+                el.classList.remove('active', 'completed');
+                if (i + 1 < step) el.classList.add('completed');
+                if (i + 1 === step) el.classList.add('active');
+            });
+
+            currentStep = step;
+        }
+
+        function generateAgent() {
+            const name = document.getElementById('agentName').value || 'Ава';
+            const temperature = document.getElementById('temperature').value / 100;
+            const customDesc = document.getElementById('customDescription').value;
+            const provider = document.getElementById('provider').value;
+            const apiKey = document.getElementById('apiKey').value;
+
+            // Get enabled tools
+            const enabledTools = [];
+            document.querySelectorAll('.tool-tag.active').forEach(tag => {
+                enabledTools.push(tag.dataset.tool);
+            });
+
+            // Generate personality
+            let personality = '';
+            if (selectedPreset && presets[selectedPreset]) {
+                personality = presets[selectedPreset].personality;
+            }
+            if (customDesc) {
+                personality = `Меня зовут ${name}. ${customDesc}`;
+            }
+            if (!personality) {
+                personality = `Меня зовут ${name}. Я полезный ИИ-ассистент.`;
+            }
+
+            // Create config
+            agentConfig = {
+                name: name,
+                personality: personality,
+                temperature: temperature,
+                tools: enabledTools,
+                provider: providers[provider],
+                apiKey: apiKey
+            };
+
+            // Build tools description for prompt
+            const toolsPromptSection = enabledTools.map(t => {
+                const tool = toolDescriptions[t];
+                if (!tool) return `- ${t}`;
+                const paramsStr = Object.entries(tool.params || {})
+                    .map(([k, v]) => `    - ${k}: ${v}`)
+                    .join('\n');
+                return `- **${tool.name}**: ${tool.description}${paramsStr ? '\n  Параметры:\n' + paramsStr : ''}`;
+            }).join('\n');
+
+            // Display generated config with tool descriptions
+            document.getElementById('generatedPrompt').textContent =
+                `Ты - автономная ИИ-сущность по имени ${name}.\n\n` +
+                `## Твоя личность:\n${personality}\n\n` +
+                `## Твои способности:\n- Мышление и анализ\n- Использование инструментов\n- Общение с пользователем\n\n` +
+                `## Доступные инструменты:\n${toolsPromptSection}`;
+
+            document.getElementById('generatedMemories').textContent =
+                personality.split('\n').map(line => `• ${line.trim()}`).join('\n');
+
+            // Show tools with descriptions
+            document.getElementById('generatedTools').textContent =
+                enabledTools.map(t => {
+                    const tool = toolDescriptions[t];
+                    return tool ? `• ${t} — ${tool.description}` : `• ${t}`;
+                }).join('\n');
+
+            document.getElementById('generatedParams').textContent =
+                `temperature: ${temperature}\n` +
+                `provider: ${provider}\n` +
+                `model: ${providers[provider].model}\n` +
+                `dm_interval: 3.0 сек\n` +
+                `mm_interval: 0.5 сек`;
+
+            nextStep(3);
+        }
+
+        // ============================================
+        // REAL AI INTEGRATION
+        // ============================================
+
+        const API_URL = 'http://localhost:8080';
+        let pollInterval = null;
+
+        async function startChat() {
+            isRunning = true;
+            document.getElementById('chatAgentName').textContent = `🤖 ${agentConfig.name}`;
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="message system">
+                    <div style="text-align: center; color: var(--text-muted);">Подключение к серверу...</div>
+                </div>
+            `;
+            nextStep(4);
+
+            // Create agent on server
+            try {
+                const response = await fetch(`${API_URL}/api/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: agentConfig.name,
+                        personality: agentConfig.personality,
+                        temperature: agentConfig.temperature,
+                        tools: agentConfig.tools,
+                        provider: document.getElementById('provider').value,
+                        apiKey: agentConfig.apiKey
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="message system">
+                            <div style="text-align: center; color: var(--warning);">❌ Ошибка: ${result.error}</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="message ai">
+                        <div class="message-header">${agentConfig.name}</div>
+                        Привет! Я ${agentConfig.name}. Чем могу помочь?
+                    </div>
+                `;
+
+                // Start polling for responses
+                startPolling();
+
+            } catch (e) {
+                document.getElementById('chatMessages').innerHTML = `
+                    <div class="message system">
+                        <div style="text-align: center; color: var(--warning);">
+                            ❌ Не удалось подключиться к серверу.<br>
+                            Запустите: python examples/wizard/server.py
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('chatInput').focus();
+        }
+
+        function startPolling() {
+            // Poll for AI responses every 500ms
+            pollInterval = setInterval(async () => {
+                if (!isRunning) {
+                    clearInterval(pollInterval);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_URL}/api/responses`);
+                    const data = await response.json();
+
+                    if (data.responses && data.responses.length > 0) {
+                        for (const msg of data.responses) {
+                            addMessage('ai', msg.text);
+                        }
+                    }
+                } catch (e) {
+                    // Server might be busy
+                }
+            }, 500);
+        }
+
+        async function stopChat() {
+            isRunning = false;
+
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/stop`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                addMessage('system', `${agentConfig.name} остановлен. Воспоминаний: ${result.memories || 0}`);
+            } catch (e) {
+                addMessage('system', `${agentConfig.name} остановлен`);
+            }
+
+            nextStep(3);
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text || !isRunning) return;
+
+            // Add user message
+            addMessage('user', text);
+            input.value = '';
+
+            // Send to real AI
+            try {
+                await fetch(`${API_URL}/api/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+            } catch (e) {
+                addMessage('system', 'Ошибка отправки сообщения');
+            }
+        }
+
+        function addMessage(type, text) {
+            const messages = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+
+            if (type === 'ai') {
+                div.innerHTML = `<div class="message-header">${agentConfig.name}</div>${text}`;
+            } else if (type === 'system') {
+                div.innerHTML = `<div style="text-align: center; color: var(--text-muted);">${text}</div>`;
+            } else {
+                div.textContent = text;
+            }
+
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
