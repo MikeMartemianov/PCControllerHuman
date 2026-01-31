@@ -137,6 +137,44 @@ class TestLivingCore:
         
         assert len(entity.get_spirit_context()) == 0
 
+    def test_register_tool_updates_brain_prompt(self, temp_dirs):
+        """After register_tool, Brain's system prompt must contain the new tool."""
+        memory_path, sandbox_path = temp_dirs
+
+        entity = LivingCore(
+            api_key="test-key",
+            memory_path=memory_path,
+            system_params={"sandbox_path": sandbox_path},
+        )
+
+        def my_custom_tool(x: str) -> str:
+            return x
+
+        entity.register_tool(
+            my_custom_tool,
+            name="my_custom_tool",
+            description="A custom test tool",
+            parameters={"x": "Input string"},
+            returns="Same string",
+        )
+
+        prompt = entity.brain._system_prompt
+        assert "my_custom_tool" in prompt
+        assert "A custom test tool" in prompt
+
+    def test_sync_tools_output_callback(self, temp_dirs):
+        """sync_tools_output_callback sets registry callback to core handler."""
+        memory_path, sandbox_path = temp_dirs
+
+        entity = LivingCore(
+            api_key="test-key",
+            memory_path=memory_path,
+            system_params={"sandbox_path": sandbox_path},
+        )
+
+        entity.sync_tools_output_callback()
+        assert entity.tools._output_callback is entity._handle_output
+
 
 class TestCreateEntity:
     """Tests for create_entity convenience function."""

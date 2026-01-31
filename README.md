@@ -63,6 +63,8 @@ asyncio.run(main())
 
 ## Registering Custom Tools
 
+After you register tools with `register_tool`, the Brain's system prompt is updated automatically — **no manual reload is needed**. (In older versions you had to call `rebuild_tool_prompts()` after adding tools; this is now done for you.)
+
 ```python
 # Method 1: Decorator
 @entity.register_tool(
@@ -83,6 +85,8 @@ entity.register_tool(
     parameters={"city": "City name"}
 )
 ```
+
+If you change tools **without** using `register_tool` (e.g. by editing `entity.tools` or the underlying `ToolRegistry` directly), call `entity.rebuild_tool_prompts()` once so the AI sees the updated list.
 
 ## Supported Providers
 
@@ -149,10 +153,12 @@ await entity.input_signal(text, source="user")  # Send input
 @entity.on_thought             # Spirit thoughts (debug)
 @entity.on_action              # Brain actions (debug)
 
-# Tools
+# Tools (reload is automatic after register_tool)
 entity.register_tool(func, name, description, parameters, returns)
 entity.list_tools()            # Get registered tool names
 entity.execute_tool(name, **kwargs)  # Direct tool execution
+entity.rebuild_tool_prompts()  # Call only if you changed tools outside register_tool
+entity.sync_tools_output_callback()  # Re-bind say_to_user to core output handler
 ```
 
 ### MemoryMatrix

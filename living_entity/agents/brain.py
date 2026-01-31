@@ -91,7 +91,7 @@ class BrainAgent(AbstractAgent):
         if tools:
             tool_descriptions = tools.get_tools_description()
             system_prompt = system_prompt.replace(
-                "## Доступные функции для кода:",
+                "## Available tools (injected):",
                 f"## Доступные инструменты:\n{tool_descriptions}\n\n## Как вызывать инструменты:"
             )
         self.set_system_prompt(system_prompt)

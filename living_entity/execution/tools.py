@@ -269,27 +269,6 @@ class ToolRegistry:
         """Get list of all registered tool names."""
         return list(self._tools.keys())
     
-    def get_tools_description(self) -> str:
-        """
-        Get formatted description of all tools for AI prompts.
-        
-        :return: Formatted string with tool names, descriptions, and parameters
-        """
-        if not self._tools:
-            return "Нет доступных инструментов"
-        
-        lines = []
-        for name, tool in self._tools.items():
-            lines.append(f"- **{name}**: {tool.description}")
-            if tool.parameters:
-                lines.append("  Параметры:")
-                for param_name, param_desc in tool.parameters.items():
-                    lines.append(f"    - `{param_name}`: {param_desc}")
-            if tool.returns:
-                lines.append(f"  Возвращает: {tool.returns}")
-        
-        return "\n".join(lines)
-    
     def execute(self, tool_name: str, **kwargs) -> ToolResult:
         """
         Execute a registered tool.

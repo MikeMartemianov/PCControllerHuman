@@ -377,6 +377,16 @@ class LivingCore:
         self._output_callbacks.append(callback)
         return callback
     
+    def sync_tools_output_callback(self) -> None:
+        """
+        Sync the ToolRegistry's output callback with LivingCore's output handler.
+        
+        The registry uses this for the ``say_to_user`` tool. Normally the callback
+        is set once at init; call this if you need to re-bind it (e.g. after
+        replacing internal components).
+        """
+        self.tools.set_output_callback(self._handle_output)
+    
     def remove_output_callback(self, callback: Callable[[str], None]) -> None:
         """Remove an output callback."""
         if callback in self._output_callbacks:
@@ -505,6 +515,10 @@ class LivingCore:
         """
         Register a custom tool for the AI to use.
         
+        The Brain's system prompt is updated automatically after each registration,
+        so you do not need to call :meth:`rebuild_tool_prompts` when using this method.
+        (Previously, manual reload was required; now it is automatic.)
+        
         Can be used as a decorator or called directly.
         
         Example as decorator:
@@ -533,10 +547,16 @@ class LivingCore:
         if func is not None:
             # Direct call: entity.register_tool(my_func, ...)
             self.tools.add_tool(func, name, description, parameters, returns, category)
+            self.rebuild_tool_prompts()
             return func
         
-        # Decorator usage: @entity.register_tool(...)
-        return self.tools.register(name, description, parameters, returns, category)
+        # Decorator: return wrapper that calls rebuild_tool_prompts after registration
+        def decorator(f: Callable) -> Callable:
+            reg = self.tools.register(name, description, parameters, returns, category)
+            result = reg(f)
+            self.rebuild_tool_prompts()
+            return result
+        return decorator
     
     def get_tools_description(self) -> str:
         """
@@ -570,7 +590,11 @@ class LivingCore:
         """
         Rebuild Brain's system prompt with current tool descriptions.
         
-        Call this after registering new tools to ensure the AI sees them.
+        Called automatically when you use :meth:`register_tool`. Call this manually
+        only if you change tools outside of ``register_tool`` (e.g. by modifying
+        :attr:`tools` directly, or adding/removing tools on the underlying
+        :class:`ToolRegistry`). Then call ``entity.rebuild_tool_prompts()`` so the
+        AI sees the updated tool list.
         """
         from living_entity.prompts.brain_prompts import BRAIN_SYSTEM_PROMPT
         
@@ -578,7 +602,7 @@ class LivingCore:
         tool_descriptions = self.tools.get_tools_description()
         
         new_prompt = BRAIN_SYSTEM_PROMPT.replace(
-            "## Доступные функции для кода:",
+            "## Available tools (injected):",
             f"## Доступные инструменты:\n{tool_descriptions}\n\n## Как вызывать инструменты:"
         )
         
@@ -589,7 +613,12 @@ class LivingCore:
         # Update Brain's system prompt
         self.brain.set_system_prompt(new_prompt)
         
-        self.logger.info(f"Rebuilt Brain prompt with {len(self.tools.list_tools())} tools", module="core")
+        tool_count = len(self.tools.list_tools())
+        self.logger.info(f"Rebuilt Brain prompt with {tool_count} tools", module="core")
+        self.logger.debug(
+            f"Tool names: {self.tools.list_tools()}; prompt length: {len(new_prompt)} chars",
+            module="core",
+        )
     
     async def __aenter__(self) -> "LivingCore":
         """Async context manager entry."""
