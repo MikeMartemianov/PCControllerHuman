@@ -10,5 +10,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: { '/api': { target: 'http://localhost:3001', changeOrigin: true } },
+    hmr: { overlay: false },
+    watch: { usePolling: false },
   },
+  optimizeDeps: {
+    esbuildOptions: { target: 'esnext' },
+  },
+  clearScreen: false,
 });

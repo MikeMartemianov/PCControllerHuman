@@ -22,8 +22,8 @@ pip install living-entity
 Or from source:
 
 ```bash
-git clone https://github.com/your-username/living-entity.git
-cd living-entity
+git clone https://github.com/MikeMartemianov/PCControllerHuman.git
+cd PCControllerHuman
 pip install -e .
 ```
 
