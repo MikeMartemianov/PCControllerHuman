@@ -22,11 +22,13 @@ export function CompleteStep() {
   const deliverables = data.deliverables || [];
   const activeItem = deliverables[activeTabIdx];
 
+  const folderPath = data.folderPath || data.name || '';
+
   useEffect(() => {
     if (!activeItem || activeItem.type !== 'code' || !activeItem.file) return;
     setLoadingFile(true);
-    api.getFile(data.name!, activeItem.file).then(setFileContent).catch(() => setFileContent('Error loading file.')).finally(() => setLoadingFile(false));
-  }, [activeItem, data.name]);
+    api.getFile(folderPath, activeItem.file).then(setFileContent).catch(() => setFileContent('Error loading file.')).finally(() => setLoadingFile(false));
+  }, [activeItem, folderPath]);
 
   const sendMessage = async () => {
     if (!chatInput.trim() || chatLoading) return;
@@ -35,7 +37,7 @@ export function CompleteStep() {
     setChatInput('');
     setChatLoading(true);
     try {
-      const context = `Project: ${data.name}. Description: ${data.description || 'N/A'}`;
+      const context = `Folder: ${folderPath}. Description: ${data.description || 'N/A'}`;
       const result = await api.aiChat(userMessage, context);
       setChatHistory((prev) => [...prev, { role: 'ai', content: result.response }]);
     } catch (e) {

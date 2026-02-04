@@ -72,6 +72,7 @@ class AbstractAgent(ABC):
         # Conversation history
         self._history: list[dict[str, str]] = []
         self._system_prompt: str = ""
+        self._rate_limited = False
     
     def set_system_prompt(self, prompt: str) -> None:
         """Set the system prompt for the agent."""
@@ -128,6 +129,7 @@ class AbstractAgent(ABC):
         
         # Make request with retry
         response = await self._request_with_retry(messages, json_mode)
+        self._rate_limited = False
         
         # Add to history
         self.add_to_history("user", prompt)
@@ -149,6 +151,8 @@ class AbstractAgent(ABC):
         """
         import re
         last_error = None
+        rate_limit_attempts = 0
+        max_rate_limit_attempts = 3
         
         for attempt in range(self.MAX_RETRIES):
             try:
@@ -175,15 +179,25 @@ class AbstractAgent(ABC):
                 error_str = str(e).lower()
                 
                 # Check for rate limit errors
-                wait_time = self._extract_wait_time(error_str)
-                
-                if wait_time:
-                    self.logger.warning(
-                        f"Rate limit hit. Waiting {wait_time} seconds...",
-                        module="agent"
-                    )
-                    await asyncio.sleep(wait_time)
-                    continue
+                if 'rate limit' in error_str or 'rate_limit' in error_str or 'too many requests' in error_str or 'quota exceeded' in error_str or 'limit exceeded' in error_str:
+                    self._rate_limited = True
+                    if rate_limit_attempts < max_rate_limit_attempts:
+                        rate_limit_attempts += 1
+                        wait_time = self._extract_wait_time(error_str) or 60.0
+                        # Exponential backoff for rate limits
+                        actual_wait = wait_time * (2 ** (rate_limit_attempts - 1))
+                        self.logger.warning(
+                            f"Rate limit hit (attempt {rate_limit_attempts}/{max_rate_limit_attempts}). Waiting {actual_wait} seconds...",
+                            module="agent"
+                        )
+                        await asyncio.sleep(actual_wait)
+                        continue
+                    else:
+                        self.logger.error(
+                            f"Rate limit hit {max_rate_limit_attempts} times. Giving up.",
+                            module="agent"
+                        )
+                        break
                 
                 # Regular retry with exponential backoff
                 delay = self.BASE_RETRY_DELAY * (2 ** attempt)
@@ -350,11 +364,11 @@ class AbstractAgent(ABC):
         pass
     
     @abstractmethod
-    async def run_loop(self, interval: float) -> None:
+    async def run_loop(self, interval: Optional[float] = None) -> None:
         """
         Run the agent's main loop at the specified interval.
         Must be implemented by subclasses.
         
-        :param interval: Loop interval in seconds
+        :param interval: Loop interval in seconds, or None for event-driven agents
         """
         pass

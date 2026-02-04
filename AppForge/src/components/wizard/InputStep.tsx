@@ -13,11 +13,12 @@ export function InputStep() {
   const { data, updateData, setStep } = useWizardStore();
   const { t } = useLanguageStore();
   const [value, setValue] = useState(data.userRequest || '');
+  const [folderPath, setFolderPath] = useState(data.folderPath || '');
   const [focused, setFocused] = useState(false);
 
   const handleNext = () => {
-    if (!value.trim()) return;
-    updateData({ userRequest: value.trim() });
+    if (!value.trim() || !folderPath.trim()) return;
+    updateData({ userRequest: value.trim(), folderPath: folderPath.trim() });
     setStep('PROPOSAL');
   };
 
@@ -33,6 +34,18 @@ export function InputStep() {
         <p className="text-gray-500 max-w-lg mx-auto text-lg">
           {t('wiz.input.subtitle')}
         </p>
+      </div>
+
+      {/* Folder Path */}
+      <div className="max-w-2xl mx-auto w-full mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Target Folder Path</label>
+        <input
+          type="text"
+          value={folderPath}
+          onChange={(e) => setFolderPath(e.target.value)}
+          placeholder="e.g., D:\Code\MyProject"
+          className="w-full bg-white border-2 border-gray-200 rounded-xl p-4 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all"
+        />
       </div>
 
       {/* Input Area */}
@@ -54,7 +67,7 @@ export function InputStep() {
             <span className="text-xs text-gray-400 hidden sm:inline">Ctrl + Enter</span>
             <button
               onClick={handleNext}
-              disabled={!value.trim()}
+              disabled={!value.trim() || !folderPath.trim()}
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/25 disabled:shadow-none hover:shadow-blue-500/40 hover:-translate-y-0.5 disabled:hover:translate-y-0"
             >
               <Sparkles className="h-5 w-5" />

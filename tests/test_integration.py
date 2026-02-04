@@ -173,7 +173,7 @@ class TestLivingCore:
         )
 
         entity.sync_tools_output_callback()
-        assert entity.tools._output_callback is entity._handle_output
+        assert entity.tools._output_callback == entity._handle_output
 
 
 class TestCreateEntity:

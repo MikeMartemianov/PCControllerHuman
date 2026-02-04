@@ -76,7 +76,9 @@ class MemoryMatrix:
         # Ensure directory exists
         os.makedirs(persist_path, exist_ok=True)
         
-        # Initialize ChromaDB client with new API
+        # Initialize ChromaDB client
+        self._fallback_memory: list[MemoryEntry] = []
+        
         try:
             # Try new PersistentClient API (chromadb >= 0.4.0)
             self._client = chromadb.PersistentClient(path=persist_path)
@@ -91,16 +93,20 @@ class MemoryMatrix:
                 # Final fallback - ephemeral client
                 self._client = chromadb.Client()
         
-        # Get or create collection
-        self._collection = self._client.get_or_create_collection(
-            name=self.COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"}
-        )
+        # Get or create collection - let ChromaDB handle embedding
+        try:
+            self._collection = self._client.get_or_create_collection(
+                name=self.COLLECTION_NAME,
+                metadata={"hnsw:space": "cosine"}
+            )
+        except Exception as e:
+            self.logger.warning(f"ChromaDB collection error: {e}, using fallback", module="memory")
+            self._collection = None
         
         # Daily cleanup tracking
         self._last_cleanup: Optional[datetime] = None
-        self._cleanup_interval_hours: int = 24  # Cleanup every 24 hours
-        self._max_memories_before_cleanup: int = 1000  # Max memories before forced cleanup
+        self._cleanup_interval_hours: int = 24
+        self._max_memories_before_cleanup: int = 1000
         
         self.logger.memory(f"Initialized memory at {persist_path}")
     

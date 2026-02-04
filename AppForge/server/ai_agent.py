@@ -65,7 +65,7 @@ const canvas=document.getElementById('g'),ctx=canvas.getContext('2d');let last=0
 """
 
 
-async def run_agent(task: str, project_path: str, api_key: str, base_url: str = None, model: str = "llama-3.3-70b"):
+async def run_agent(task: str, folder_path: str, api_key: str, base_url: str = None, model: str = "llama-3.3-70b"):
     """Run the AI agent to complete a task."""
     try:
         sys.stdout.reconfigure(encoding='utf-8', line_buffering=True)
@@ -74,7 +74,27 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
         pass
 
     print("[AI]: Agent starting...", flush=True)
-    print(f"[AI]: Project path: {project_path}", flush=True)
+    print(f"[AI]: Folder path: {folder_path}", flush=True)
+    
+    # Load personality
+    memory_dir = os.path.join(LIVING_ENTITY_PATH, ".ai_memory")
+    os.makedirs(memory_dir, exist_ok=True)
+    system_prompt_file = os.path.join(memory_dir, "system_prompt.txt")
+    memories_file = os.path.join(memory_dir, "memories.json")
+    
+    if os.path.exists(system_prompt_file):
+        with open(system_prompt_file, 'r', encoding='utf-8') as f:
+            system_prompt = f.read().strip()
+    else:
+        system_prompt = KNOWLEDGE_BASE
+    
+    if os.path.exists(memories_file):
+        with open(memories_file, 'r', encoding='utf-8') as f:
+            memories = json.load(f)
+    else:
+        memories = []
+    
+    personality_text = system_prompt + "\n\nMemories:\n" + "\n".join(f"- {m}" for m in memories)
     
     entity = LivingCore(
         api_key=api_key,
@@ -88,8 +108,8 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
             "mm_interval": 0.5,
             "unsafe_mode": True,
         },
-        memory_path=os.path.join(project_path, ".ai_memory"),
-        personality_text=KNOWLEDGE_BASE
+        memory_path=memory_dir,
+        personality_text=personality_text
     )
 
     print("[AI]: LivingCore initialized", flush=True)
@@ -106,8 +126,8 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def create_file(path: str, content: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
-            os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else project_path, exist_ok=True)
+            full_path = os.path.join(folder_path, path)
+            os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else folder_path, exist_ok=True)
             with open(full_path, 'w', encoding='utf-8') as f:
                 f.write(content)
             results["files_created"].append(path)
@@ -123,7 +143,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def read_file(path: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if os.path.exists(full_path):
                 with open(full_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -143,7 +163,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def edit_file(path: str, old_text: str, new_text: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if not os.path.exists(full_path):
                 return f"✗ File not found: {path}"
             with open(full_path, 'r', encoding='utf-8') as f:
@@ -169,7 +189,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def append_to_file(path: str, content: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             with open(full_path, 'a', encoding='utf-8') as f:
                 f.write(content)
             return f"✓ Appended to: {path}"
@@ -183,7 +203,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def delete_file(path: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if os.path.exists(full_path):
                 os.remove(full_path)
                 results["files_deleted"].append(path)
@@ -202,9 +222,9 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def copy_file(source: str, destination: str) -> str:
         try:
-            src = os.path.join(project_path, source)
-            dst = os.path.join(project_path, destination)
-            os.makedirs(os.path.dirname(dst) if os.path.dirname(dst) else project_path, exist_ok=True)
+            src = os.path.join(folder_path, source)
+            dst = os.path.join(folder_path, destination)
+            os.makedirs(os.path.dirname(dst) if os.path.dirname(dst) else folder_path, exist_ok=True)
             shutil.copy2(src, dst)
             results["files_created"].append(destination)
             return f"✓ Copied {source} to {destination}"
@@ -221,9 +241,9 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def move_file(source: str, destination: str) -> str:
         try:
-            src = os.path.join(project_path, source)
-            dst = os.path.join(project_path, destination)
-            os.makedirs(os.path.dirname(dst) if os.path.dirname(dst) else project_path, exist_ok=True)
+            src = os.path.join(folder_path, source)
+            dst = os.path.join(folder_path, destination)
+            os.makedirs(os.path.dirname(dst) if os.path.dirname(dst) else folder_path, exist_ok=True)
             shutil.move(src, dst)
             return f"✓ Moved {source} to {destination}"
         except Exception as e:
@@ -238,7 +258,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def list_dir(path: str = ".") -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if not os.path.exists(full_path):
                 return f"✗ Directory not found: {path}"
             items = []
@@ -260,7 +280,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def create_dir(path: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             os.makedirs(full_path, exist_ok=True)
             return f"✓ Created directory: {path}"
         except Exception as e:
@@ -273,7 +293,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def delete_dir(path: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if os.path.exists(full_path):
                 shutil.rmtree(full_path)
                 return f"✓ Deleted directory: {path}"
@@ -294,12 +314,12 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     def search_in_files(query: str, file_pattern: str = "*") -> str:
         try:
             matches = []
-            for root, dirs, files in os.walk(project_path):
+            for root, dirs, files in os.walk(folder_path):
                 dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', '.ai_memory']]
                 for file in files:
                     if file_pattern == "*" or file.endswith(file_pattern.replace("*", "")):
                         file_path = os.path.join(root, file)
-                        rel_path = os.path.relpath(file_path, project_path)
+                        rel_path = os.path.relpath(file_path, folder_path)
                         try:
                             with open(file_path, 'r', encoding='utf-8') as f:
                                 for i, line in enumerate(f, 1):
@@ -318,7 +338,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
     )
     def file_stats(path: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if not os.path.exists(full_path):
                 return f"✗ File not found: {path}"
             with open(full_path, 'r', encoding='utf-8') as f:
@@ -343,7 +363,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
             result = subprocess.run(
                 command,
                 shell=True,
-                cwd=project_path,
+                cwd=folder_path,
                 capture_output=True,
                 text=True,
                 timeout=120
@@ -385,7 +405,7 @@ async def run_agent(task: str, project_path: str, api_key: str, base_url: str = 
                     dep = dep.strip()
                     if dep:
                         pkg["dependencies"][dep] = "latest"
-            full_path = os.path.join(project_path, "package.json")
+            full_path = os.path.join(folder_path, "package.json")
             with open(full_path, 'w', encoding='utf-8') as f:
                 json.dump(pkg, f, indent=2)
             results["files_created"].append("package.json")
@@ -470,7 +490,7 @@ API Template:
         returns="Exists/Not exists with type"
     )
     def path_exists(path: str) -> str:
-        full_path = os.path.join(project_path, path)
+        full_path = os.path.join(folder_path, path)
         if os.path.exists(full_path):
             if os.path.isdir(full_path):
                 return f"✓ Directory exists: {path}"
@@ -488,7 +508,7 @@ API Template:
             p = p.strip()
             if not p:
                 continue
-            full_path = os.path.join(project_path, p)
+            full_path = os.path.join(folder_path, p)
             try:
                 if os.path.exists(full_path):
                     with open(full_path, 'r', encoding='utf-8') as f:
@@ -511,7 +531,7 @@ API Template:
     )
     def insert_at_line(path: str, line_number: int, content: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if not os.path.exists(full_path):
                 return f"✗ File not found: {path}"
             with open(full_path, 'r', encoding='utf-8') as f:
@@ -535,7 +555,7 @@ API Template:
     )
     def regex_replace(path: str, pattern: str, replacement: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
+            full_path = os.path.join(folder_path, path)
             if not os.path.exists(full_path):
                 return f"✗ File not found: {path}"
             with open(full_path, 'r', encoding='utf-8') as f:
@@ -559,8 +579,8 @@ API Template:
     )
     def write_binary(path: str, base64_data: str) -> str:
         try:
-            full_path = os.path.join(project_path, path)
-            os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else project_path, exist_ok=True)
+            full_path = os.path.join(folder_path, path)
+            os.makedirs(os.path.dirname(full_path) if os.path.dirname(full_path) else folder_path, exist_ok=True)
             data = base64.b64decode(base64_data)
             with open(full_path, 'wb') as f:
                 f.write(data)
@@ -682,7 +702,7 @@ function hideLoading() { document.getElementById('loading').style.display = 'non
     # Send task
     await entity.input_signal(f"""You are AppForge AI Builder - an expert developer agent.
 
-PROJECT PATH: {project_path}
+PROJECT PATH: {folder_path}
 TASK: {task}
 
 INSTRUCTIONS:
@@ -712,17 +732,17 @@ START NOW - create an amazing application!""")
 def main():
     """Entry point for command line usage."""
     if len(sys.argv) < 4:
-        print("Usage: python ai_agent.py <task> <project_path> <api_key> [base_url] [model]")
+        print("Usage: python ai_agent.py <task> <folder_path> <api_key> [base_url] [model]")
         sys.exit(1)
 
     task = sys.argv[1]
-    project_path = sys.argv[2]
+    folder_path = sys.argv[2]
     api_key = sys.argv[3]
     base_url = sys.argv[4] if len(sys.argv) > 4 else None
     model = sys.argv[5] if len(sys.argv) > 5 else "llama-3.3-70b"
 
     # Run agent
-    result = asyncio.run(run_agent(task, project_path, api_key, base_url, model))
+    result = asyncio.run(run_agent(task, folder_path, api_key, base_url, model))
 
     # Output JSON result
     print("\n=== RESULT ===")

@@ -33,8 +33,7 @@ export function BuildingStep() {
     if (hasStarted.current) return;
     hasStarted.current = true;
 
-    const base = (data.userRequest || 'my-app').split(' ').slice(0, 3).join('-').replace(/[^\w\-]/g, '') || 'app';
-    const uniqueName = base + '-' + Date.now();
+    const uniqueName = data.folderPath;
     const task = data.userRequest || data.description || `Create a web app called "${uniqueName}"`;
 
     setLogs([{ type: 'status', message: '🚀 Connecting to AI Agent...' }]);
@@ -49,9 +48,9 @@ export function BuildingStep() {
     const normalizeApiBase = (value: string) => value.replace(/\/+$/, '');
     const apiRoot = normalizeApiBase(apiBase);
     const isApiRoot = apiRoot.endsWith('/api');
-    const streamPath = isApiRoot ? '/agent/stream/' : '/api/agent/stream/';
+    const streamPath = isApiRoot ? '/agent/stream' : '/api/agent/stream';
     const statusPath = isApiRoot ? '/ai/status' : '/api/ai/status';
-    const streamUrl = `${apiRoot}${streamPath}${encodeURIComponent(uniqueName)}?task=${encodeURIComponent(task)}`;
+    const streamUrl = `${apiRoot}${streamPath}?folder=${encodeURIComponent(data.folderPath)}&task=${encodeURIComponent(task)}`;
     const statusUrl = `${apiRoot}${statusPath}`;
 
     setLogs(prev => [...prev, { type: 'log', message: `SSE: ${streamUrl}` }]);

@@ -134,10 +134,16 @@ class TestSpiritAgent:
     
     def test_command_queue(self):
         """Test getting command queue."""
+        import asyncio
+        from living_entity.agents.spirit import SpiritThought
+        
         spirit = SpiritAgent(api_key="test-key")
+        stream = asyncio.Queue()
+        spirit.set_thought_stream(stream)
         
         queue = spirit.get_command_queue()
         assert queue is not None
+        assert queue is stream
     
     def test_context_management(self):
         """Test context management."""
@@ -166,12 +172,12 @@ class TestBrainAgent:
         assert brain.focus is not None
     
     def test_set_command_queue(self):
-        """Test setting command queue."""
+        """Test setting thought stream."""
         brain = BrainAgent(api_key="test-key")
-        queue: asyncio.Queue = asyncio.Queue()
+        stream: asyncio.Queue = asyncio.Queue()
         
-        brain.set_command_queue(queue)
-        assert brain._command_queue is queue
+        brain.set_thought_stream(stream)
+        assert brain._thought_stream is stream
     
     def test_set_output_callback(self):
         """Test setting output callback."""
@@ -200,17 +206,27 @@ class TestAgentIntegration:
     
     @pytest.mark.asyncio
     async def test_spirit_to_brain_communication(self):
-        """Test command passing from Spirit to Brain."""
+        """Test thought passing from Spirit to Brain."""
+        import asyncio
+        
         spirit = SpiritAgent(api_key="test-key")
         brain = BrainAgent(api_key="test-key")
         
-        # Connect command queue
-        brain.set_command_queue(spirit.get_command_queue())
+        # Connect thought stream
+        stream = asyncio.Queue()
+        spirit.set_thought_stream(stream)
+        brain.set_thought_stream(stream)
         
-        # Put a command in Spirit's queue
-        from living_entity.agents.spirit import SpiritCommand
-        command = SpiritCommand(type="delegate", content="Test task", priority="high")
-        await spirit._command_queue.put(command)
+        # Put a thought in the shared stream
+        from living_entity.agents.spirit import SpiritThought
+        thought = SpiritThought(
+            narration="Test narration",
+            criticism="Test criticism", 
+            guidance="Test task",
+            memories=["memory1"],
+            reflection="Test reflection"
+        )
+        await stream.put(thought)
         
         # Brain should be able to receive it
-        assert not brain._command_queue.empty()
+        assert not stream.empty()

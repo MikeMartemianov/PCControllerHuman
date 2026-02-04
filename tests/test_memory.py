@@ -110,9 +110,10 @@ class TestMemoryMatrix:
         """Test getting all memories."""
         memory = MemoryMatrix(persist_path=temp_memory_path)
         
-        memory.save_memory("Memory 1", source="test")
-        memory.save_memory("Memory 2", source="test")
-        memory.save_memory("Memory 3", source="test")
+        # Use very distinct content to avoid duplicate detection
+        memory.save_memory("Alpha: First unique memory content about programming", source="test")
+        memory.save_memory("Beta: Second unique memory about cooking recipes", source="test")
+        memory.save_memory("Gamma: Third unique memory about space exploration", source="test")
         
         all_memories = memory.get_all_memories()
         
@@ -123,8 +124,11 @@ class TestMemoryMatrix:
         """Test getting memories with limit."""
         memory = MemoryMatrix(persist_path=temp_memory_path)
         
-        for i in range(10):
-            memory.save_memory(f"Memory {i}", source="test")
+        # Use unique content for each memory
+        topics = ["astronomy", "biology", "chemistry", "dentistry", "ecology",
+                  "forestry", "geology", "history", "immunology", "journalism"]
+        for i, topic in enumerate(topics):
+            memory.save_memory(f"Unique content about {topic} number {i}", source="test")
         
         limited = memory.get_all_memories(limit=5)
         
@@ -134,8 +138,9 @@ class TestMemoryMatrix:
         """Test clearing all memories."""
         memory = MemoryMatrix(persist_path=temp_memory_path)
         
-        memory.save_memory("Memory 1", source="test")
-        memory.save_memory("Memory 2", source="test")
+        # Use completely different content to avoid any similarity detection
+        memory.save_memory("The quick brown fox jumps over the lazy dog", source="test")
+        memory.save_memory("Python programming language was created by Guido van Rossum", source="test")
         
         assert memory.count() == 2
         

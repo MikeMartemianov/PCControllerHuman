@@ -16,12 +16,6 @@ A Python library for creating autonomous AI agents with a Spirit/Brain architect
 ## Installation
 
 ```bash
-pip install living-entity
-```
-
-Or from source:
-
-```bash
 git clone https://github.com/MikeMartemianov/PCControllerHuman.git
 cd PCControllerHuman
 pip install -e .

@@ -17,6 +17,8 @@ from living_entity.memory.context_reducer import ContextReducer
 from living_entity.execution.executor import FunctionExecutor
 from living_entity.execution.focus import FocusModule
 from living_entity.execution.tools import ToolRegistry
+from living_entity.modules.insight import InsightModule
+from living_entity.modules.prediction import PredictionModule
 from living_entity.utils.logging import get_logger, EntityLogger, LogLevel
 
 
@@ -27,7 +29,7 @@ class SystemParams(BaseModel):
     max_tokens: int = Field(default=1024, ge=1)
     dm_interval: float = Field(default=3.0, ge=0.5)
     mm_interval: float = Field(default=1.0, ge=0.1)
-    context_compression_threshold: float = Field(default=0.8, ge=0.5, le=1.0)
+    context_compression_threshold: float = Field(default=0.7, ge=0.5, le=1.0)  # More aggressive compression
     max_context_tokens: Optional[int] = None
     sandbox_path: str = "./sandbox"
     unsafe_mode: bool = False
@@ -135,40 +137,50 @@ class LivingCore:
         
         :param text: Personality/context text
         """
-        self.logger.info("Processing personality data...", module="core")
-        
-        # Create personality addition for system prompts
-        self._personality_prompt_addition = f"""
-
-## Моя личность и контекст:
-{text}
-"""
-        
-        # Update Spirit system prompt
-        current_spirit_prompt = self.spirit._system_prompt
-        self.spirit.set_system_prompt(current_spirit_prompt + self._personality_prompt_addition)
-        
-        # Update Brain system prompt  
-        current_brain_prompt = self.brain._system_prompt
-        self.brain.set_system_prompt(current_brain_prompt + self._personality_prompt_addition)
-        
-        # Split personality text into pieces and save as foundational memories
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        
-        for line in lines:
-            # Skip very short lines
-            if len(line) < 10:
-                continue
+        try:
+            self.logger.info("Processing personality data...", module="core")
             
-            # Save as foundational memory with high importance
-            self.memory.save_memory(
-                text=line,
-                source="personality",
-                importance=0.9,
-                metadata={"type": "foundational", "origin": "personality_init"}
-            )
-        
-        self.logger.info(f"Personality processed: {len(lines)} foundational memories created", module="core")
+            # Create personality addition for system prompts (shortened)
+            personality_summary = "Я - дружелюбная ИИ-сущность, помогающая пользователю с задачами на ПК."
+            self._personality_prompt_addition = f"""
+
+## Моя личность:
+{personality_summary}
+"""
+            
+            # Update Spirit system prompt
+            current_spirit_prompt = self.spirit._system_prompt
+            self.spirit.set_system_prompt(current_spirit_prompt + self._personality_prompt_addition)
+            
+            # Update Brain system prompt  
+            current_brain_prompt = self.brain._system_prompt
+            self.brain.set_system_prompt(current_brain_prompt + self._personality_prompt_addition)
+            
+            # Split personality text into pieces and save as foundational memories
+            lines = [line.strip() for line in text.split('\n') if line.strip()]
+            
+            for line in lines:
+                # Skip very short lines
+                if len(line) < 10:
+                    continue
+                
+                try:
+                    # Save as foundational memory with high importance
+                    self.memory.save_memory(
+                        text=line,
+                        source="personality",
+                        importance=0.9,
+                        metadata={"type": "foundational", "origin": "personality_init"}
+                    )
+                    self.logger.debug(f"Saved memory: {line[:50]}...", module="core")
+                except Exception as e:
+                    self.logger.error(f"Failed to save personality memory: {e}", module="core")
+                    # Continue with other memories
+            
+            self.logger.info(f"Personality processed: {len(lines)} foundational memories created", module="core")
+        except Exception as e:
+            self.logger.error(f"Failed to process personality: {e}", module="core")
+            # Continue without personality
     
     def set_personality(self, text: str) -> None:
         """
@@ -196,6 +208,21 @@ class LivingCore:
         
         # Focus Module
         self.focus = FocusModule()
+        
+        # Insight Module (ФМ) - Background problem solving
+        self.insight = InsightModule(
+            memory=self.memory,
+            llm_callback=self._insight_llm_callback,
+        )
+        
+        # Prediction Module (ПБМ) - Input prediction
+        self.prediction = PredictionModule(
+            memory=self.memory,
+            llm_callback=self._prediction_llm_callback,
+        )
+        
+        # Shared thought stream for Spirit -> Brain communication
+        self.thought_stream = asyncio.Queue()
         
         # Spirit Agent (DM)
         spirit_config = AgentConfig(
@@ -228,8 +255,9 @@ class LivingCore:
             tools=self.tools,    # Pass ToolRegistry
         )
         
-        # Connect Spirit command queue to Brain
-        self.brain.set_command_queue(self.spirit.get_command_queue())
+        # Connect Spirit and Brain via thought stream
+        self.spirit.set_thought_stream(self.thought_stream)
+        self.brain.set_thought_stream(self.thought_stream)
         
         # Set output callback on Brain
         self.brain.set_output_callback(self._handle_output)
@@ -279,6 +307,24 @@ class LivingCore:
             except Exception as e:
                 self.logger.error(f"Output callback error: {e}", module="core")
     
+    async def _insight_llm_callback(self, prompt: str) -> str:
+        """LLM callback for InsightModule problem solving."""
+        try:
+            response = await self.spirit.think(prompt, include_history=False)
+            return response
+        except Exception as e:
+            self.logger.error(f"Insight LLM callback error: {e}", module="core")
+            return f"Error: {e}"
+    
+    async def _prediction_llm_callback(self, prompt: str) -> str:
+        """LLM callback for PredictionModule analysis."""
+        try:
+            response = await self.spirit.think(prompt, include_history=False)
+            return response
+        except Exception as e:
+            self.logger.error(f"Prediction LLM callback error: {e}", module="core")
+            return f"Error: {e}"
+    
     async def start(self) -> None:
         """
         Start the entity's life cycles.
@@ -296,18 +342,21 @@ class LivingCore:
         # Check if memory cleanup is needed (daily)
         self.memory.check_and_cleanup()
         
+        # Start Insight Module (background problem solving)
+        await self.insight.start()
+        
         # Start Spirit loop
         self._spirit_task = asyncio.create_task(
             self.spirit.run_loop(self.params.dm_interval)
         )
         
-        # Start Brain loop
+        # Start Brain event loop (no fixed interval)
         self._brain_task = asyncio.create_task(
-            self.brain.run_loop(self.params.mm_interval)
+            self.brain.run_loop()
         )
         
         self.logger.info(
-            f"Entity started - Spirit: {self.params.dm_interval}s, Brain: {self.params.mm_interval}s",
+            f"Entity started - Spirit: {self.params.dm_interval}s, Brain: event-driven, Insight: active",
             module="core"
         )
     
@@ -325,6 +374,9 @@ class LivingCore:
         # Stop agents
         self.spirit.stop()
         self.brain.stop()
+        
+        # Stop Insight Module
+        await self.insight.stop()
         
         # Wait for tasks to complete
         if self._spirit_task:
